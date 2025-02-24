@@ -104,21 +104,24 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 403) {
       try {
-        const refreshResponse = await axios.get("http://backend:1323/refresh-server", {
+        const refreshResponse = await axios.get("http://backend:1323/refresh", {
           headers: {
             "Content-Type": "application/json",
             Cookie: cookie,
           },
           // withCredentials: true,
         });
-        const newAccessToken = refreshResponse.data.accessToken;
-
-        context.res.setHeader("Set-Cookie", `AccessToken=${newAccessToken}`);
+        let newAccessToken
+        const setCookieHeader = refreshResponse.headers["set-cookie"];
+        if (setCookieHeader) {
+          newAccessToken = setCookieHeader.find((cookie: string) => cookie.startsWith("AccessToken"));
+          context.res.setHeader("Set-Cookie", setCookieHeader);
+        }
 
         const retryResponse = await axios.get("http://backend:1323/authz", {
           headers: {
             "Content-Type": "application/json",
-            Cookie: "AccessToken=" + newAccessToken,
+            Cookie: newAccessToken,
           },
         });
 
